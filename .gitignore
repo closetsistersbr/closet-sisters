@@ -1,0 +1,38 @@
+# ============================================================
+#  SEGURANÇA — NUNCA versionar segredos nem dados sensíveis
+# ============================================================
+
+# Variáveis de ambiente e segredos (chaves de API, senhas, tokens)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+secrets/
+**/credentials*.json
+
+# Banco de dados local e backups (podem conter dados de clientes)
+*.sqlite
+*.sqlite3
+*.db
+backups/
+*.dump
+
+# Dependências
+node_modules/
+
+# Logs (podem vazar dados/segredos)
+logs/
+*.log
+npm-debug.log*
+
+# Uploads de fotos de produtos (ficam fora do versionamento)
+backend/uploads/
+frontend/assets/uploads/
+
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
