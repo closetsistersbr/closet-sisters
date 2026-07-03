@@ -40,9 +40,6 @@ async function iniciar() {
   // Rate limit mais rígido no login.
   app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }));
 
-  // Rotas da API.
-  app.use('/api', router);
-
   // Saúde do servidor.
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
@@ -65,6 +62,9 @@ async function iniciar() {
       res.status(500).json({ erro: err.message });
     }
   });
+
+  // Rotas da API.
+  app.use('/api', router);
 
   // 404 e tratador de erros (sempre por último).
   app.use((_req, _res, next) => next(new AppError('Rota não encontrada.', 404)));
