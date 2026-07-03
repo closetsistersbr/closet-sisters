@@ -46,6 +46,26 @@ async function iniciar() {
   // Saúde do servidor.
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
+  // Rota de seed único — só funciona com a chave correta e remove-se após uso.
+  app.get('/api/seed-init', async (req, res) => {
+    if (req.query.key !== 'closet2026seed') return res.status(403).json({ erro: 'Não autorizado.' });
+    try {
+      const { authService } = await import('./services/authService.js');
+      const { query } = await import('./config/database.js');
+      const check = await query('SELECT COUNT(*) AS n FROM usuarios');
+      if (parseInt(check.rows[0].n) > 0) return res.json({ ok: false, msg: 'Banco já populado.' });
+      const socias = [
+        { nome: 'Sócia 1', email: 'socia1@loja.com', senha: 'troque123' },
+        { nome: 'Sócia 2', email: 'socia2@loja.com', senha: 'troque123' },
+        { nome: 'Sócia 3', email: 'socia3@loja.com', senha: 'troque123' },
+      ];
+      for (const s of socias) await authService.registrar(s);
+      res.json({ ok: true, msg: 'Seed concluído! Faça login com socia1@loja.com / troque123' });
+    } catch (err) {
+      res.status(500).json({ erro: err.message });
+    }
+  });
+
   // 404 e tratador de erros (sempre por último).
   app.use((_req, _res, next) => next(new AppError('Rota não encontrada.', 404)));
   app.use(errorHandler);
