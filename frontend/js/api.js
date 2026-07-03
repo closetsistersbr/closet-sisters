@@ -1,7 +1,7 @@
 // Cliente da API. ÚNICO ponto do frontend que fala com o backend.
 // O token de sessão fica no navegador (localStorage) — NUNCA há chave de API
 // aqui; segredos vivem só no backend.
-const BASE_URL = 'http://localhost:3333/api';
+const BASE_URL = 'https://closet-sisters-api.onrender.com/api';
 
 const TOKEN_KEY = 'loja_token';
 export const auth = {
