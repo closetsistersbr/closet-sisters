@@ -21,6 +21,8 @@ router.get('/produtos', produtoController.listar);
 router.get('/produtos/alertas-estoque', produtoController.alertas);
 router.get('/produtos/:id', produtoController.obter);
 router.post('/produtos', validate(produtoSchema), produtoController.criar);
+router.put('/produtos/:id', validate(produtoSchema), produtoController.atualizar);
+router.delete('/produtos/:id', produtoController.excluir);
 
 // Clientes
 router.get('/clientes', clienteController.listar);

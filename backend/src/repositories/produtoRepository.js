@@ -52,6 +52,31 @@ export const produtoRepository = {
     });
   },
 
+  async atualizar(id, d) {
+    return withTransaction(async (client) => {
+      await client.query(
+        `UPDATE produtos SET nome=$1, colecao=$2, tecido=$3, tipo=$4, medidas=$5,
+          lavagem=$6, preco_custo=$7, preco_venda=$8 WHERE id=$9`,
+        [d.nome, d.colecao ?? null, d.tecido ?? null, d.tipo ?? null, d.medidas ?? null,
+         d.lavagem ?? null, d.preco_custo, d.preco_venda, id],
+      );
+      // Substitui variações: apaga as antigas e insere as novas
+      await client.query('DELETE FROM variacoes WHERE produto_id = $1', [id]);
+      for (const v of d.variacoes) {
+        await client.query(
+          `INSERT INTO variacoes (produto_id, tamanho, cor, estoque, estoque_min)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [id, v.tamanho, v.cor, v.estoque ?? 0, v.estoque_min ?? 1],
+        );
+      }
+      return this.buscarPorId(id, client);
+    });
+  },
+
+  async excluir(id) {
+    await query('UPDATE produtos SET ativo = FALSE WHERE id = $1', [id]);
+  },
+
   // Variações com estoque <= estoque_min (alerta de esgotado/baixo).
   async alertasEstoque() {
     const r = await query(`

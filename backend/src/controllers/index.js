@@ -28,6 +28,15 @@ export const produtoController = {
     const p = await produtoRepository.criar(req.body);
     res.status(201).json(p);
   }),
+  atualizar: wrap(async (req, res) => {
+    const p = await produtoRepository.atualizar(Number(req.params.id), req.body);
+    if (!p) throw NotFound('Produto não encontrado.');
+    res.json(p);
+  }),
+  excluir: wrap(async (req, res) => {
+    await produtoRepository.excluir(Number(req.params.id));
+    res.json({ ok: true });
+  }),
   alertas: wrap(async (_req, res) => res.json(await produtoRepository.alertasEstoque())),
 };
 

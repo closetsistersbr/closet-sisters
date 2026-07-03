@@ -80,47 +80,97 @@ async function renderProdutos() {
   view.append(botaoNovoProduto());
   if (!produtos.length) { view.append(el('<p>Nenhum produto cadastrado ainda.</p>')); return; }
 
-  const linhas = produtos.map((p) => {
-    const vars = p.variacoes.map((v) =>
-      `<span class="tag">${esc(v.tamanho)}/${esc(v.cor)}: ${v.estoque <= v.estoque_min ? `<span class="alerta">${v.estoque}</span>` : v.estoque}</span>`).join(' ');
-    return `<tr><td>${esc(p.nome)}<br><small>${esc(p.colecao || '')}</small></td>
-      <td>${vars}</td><td>${brl(p.preco_venda)}</td><td>${brl(p.preco_venda - p.preco_custo)}</td></tr>`;
-  }).join('');
-  view.append(el(`<table><thead><tr><th>Produto</th><th>Variações (estoque)</th><th>Preço</th><th>Margem</th></tr></thead><tbody>${linhas}</tbody></table>`));
+  const tabela = el(`<table><thead><tr><th>Produto</th><th>Variações (estoque)</th><th>Preço</th><th>Margem</th><th></th></tr></thead><tbody></tbody></table>`);
+  const tbody = tabela.querySelector('tbody');
+  produtos.forEach((p) => tbody.append(linhaProduto(p)));
+  view.append(tabela);
+}
+
+function linhaProduto(p) {
+  const vars = p.variacoes.map((v) =>
+    `<span class="tag">${esc(v.tamanho)}/${esc(v.cor)}: ${v.estoque <= v.estoque_min ? `<span class="alerta">${v.estoque}</span>` : v.estoque}</span>`).join(' ');
+  const tr = el(`<tr>
+    <td>${esc(p.nome)}<br><small>${esc(p.colecao || '')}</small></td>
+    <td>${vars}</td>
+    <td>${brl(p.preco_venda)}</td>
+    <td>${brl(p.preco_venda - p.preco_custo)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn-sec btn btn-editar" style="font-size:.8rem;padding:.2rem .6rem">Editar</button>
+      <button class="btn-sec btn btn-excluir" style="font-size:.8rem;padding:.2rem .6rem;color:#c00">Excluir</button>
+    </td></tr>`);
+
+  tr.querySelector('.btn-editar').addEventListener('click', () => {
+    const existing = document.getElementById('form-edicao-' + p.id);
+    if (existing) { existing.remove(); return; }
+    const formRow = document.createElement('tr');
+    formRow.id = 'form-edicao-' + p.id;
+    formRow.innerHTML = '<td colspan="5"></td>';
+    formRow.firstChild.append(formProduto(p));
+    tr.after(formRow);
+  });
+
+  tr.querySelector('.btn-excluir').addEventListener('click', async () => {
+    if (!confirm(`Excluir "${p.nome}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await api.excluirProduto(p.id);
+      irPara('produtos');
+    } catch (err) { alert('Erro ao excluir: ' + err.message); }
+  });
+  return tr;
 }
 
 function botaoNovoProduto() {
   const wrap = el('<div style="margin-bottom:1rem"></div>');
   const btn = el('<button class="btn">+ Novo produto</button>');
-  btn.addEventListener('click', () => wrap.append(formProduto()));
+  btn.addEventListener('click', () => {
+    const existing = wrap.querySelector('.form-produto-novo');
+    if (existing) { existing.remove(); return; }
+    const f = formProduto();
+    f.classList.add('form-produto-novo');
+    wrap.append(f);
+  });
   wrap.append(btn);
   return wrap;
 }
 
-function formProduto() {
+function formProduto(produtoExistente) {
+  const p = produtoExistente || {};
   const form = el(`
     <div class="box" style="margin-top:1rem">
-      <div class="linha"><div style="flex:2"><label>Nome</label><input id="p-nome"></div>
-        <div style="flex:1"><label>Coleção</label><input id="p-colecao"></div></div>
-      <div class="linha"><div style="flex:1"><label>Preço custo</label><input id="p-custo" type="number" step="0.01"></div>
-        <div style="flex:1"><label>Preço venda</label><input id="p-venda" type="number" step="0.01"></div></div>
-      <div class="linha"><div style="flex:1"><label>Tecido</label><input id="p-tecido"></div>
-        <div style="flex:1"><label>Tipo</label><input id="p-tipo"></div></div>
-      <label>Medidas</label><input id="p-medidas">
-      <label>Instruções de lavagem</label><input id="p-lavagem">
+      <div class="linha"><div style="flex:2"><label>Nome</label><input id="p-nome" value="${esc(p.nome || '')}"></div>
+        <div style="flex:1"><label>Coleção</label><input id="p-colecao" value="${esc(p.colecao || '')}"></div></div>
+      <div class="linha"><div style="flex:1"><label>Preço custo</label><input id="p-custo" type="number" step="0.01" value="${p.preco_custo || ''}"></div>
+        <div style="flex:1"><label>Preço venda</label><input id="p-venda" type="number" step="0.01" value="${p.preco_venda || ''}"></div></div>
+      <div class="linha"><div style="flex:1"><label>Tecido</label><input id="p-tecido" value="${esc(p.tecido || '')}"></div>
+        <div style="flex:1"><label>Tipo</label><input id="p-tipo" value="${esc(p.tipo || '')}"></div></div>
+      <label>Medidas</label><input id="p-medidas" value="${esc(p.medidas || '')}">
+      <label>Instruções de lavagem</label><input id="p-lavagem" value="${esc(p.lavagem || '')}">
       <label>Variações</label>
       <div id="p-vars"></div>
       <button class="btn-sec btn" id="p-add-var" type="button">+ Variação</button>
       <div id="p-msg"></div>
-      <div style="margin-top:.8rem"><button class="btn" id="p-salvar">Salvar produto</button></div>
+      <div style="margin-top:.8rem;display:flex;gap:.5rem">
+        <button class="btn" id="p-salvar">${p.id ? 'Salvar alterações' : 'Salvar produto'}</button>
+        ${p.id ? '<button class="btn-sec btn" id="p-cancelar">Cancelar</button>' : ''}
+      </div>
     </div>`);
 
   const vars = form.querySelector('#p-vars');
-  const addVar = () => vars.append(el(`<div class="linha" style="margin-bottom:.5rem">
-    <input placeholder="Tamanho (P/M/G)" class="v-tam"><input placeholder="Cor" class="v-cor">
-    <input placeholder="Estoque" type="number" class="v-est" style="max-width:90px"></div>`));
-  addVar();
-  form.querySelector('#p-add-var').addEventListener('click', addVar);
+  const addVar = (v = {}) => vars.append(el(`<div class="linha" style="margin-bottom:.5rem">
+    <input placeholder="Tamanho (P/M/G)" class="v-tam" value="${esc(v.tamanho || '')}">
+    <input placeholder="Cor" class="v-cor" value="${esc(v.cor || '')}">
+    <input placeholder="Estoque" type="number" class="v-est" style="max-width:90px" value="${v.estoque ?? ''}">
+    <button type="button" class="btn-sec btn v-rm" style="padding:.2rem .5rem;color:#c00" title="Remover">✕</button></div>`));
+
+  if (p.variacoes && p.variacoes.length) {
+    p.variacoes.forEach((v) => addVar(v));
+  } else {
+    addVar();
+  }
+
+  vars.addEventListener('click', (e) => { if (e.target.classList.contains('v-rm')) e.target.closest('.linha').remove(); });
+  form.querySelector('#p-add-var').addEventListener('click', () => addVar());
+  if (p.id) form.querySelector('#p-cancelar').addEventListener('click', () => form.closest('tr')?.remove() || form.remove());
 
   form.querySelector('#p-salvar').addEventListener('click', async () => {
     const msg = form.querySelector('#p-msg');
@@ -129,18 +179,23 @@ function formProduto() {
       cor: l.querySelector('.v-cor').value.trim(),
       estoque: Number(l.querySelector('.v-est').value || 0),
     })).filter((v) => v.tamanho && v.cor);
+    const dados = {
+      nome: form.querySelector('#p-nome').value.trim(),
+      colecao: form.querySelector('#p-colecao').value.trim(),
+      tecido: form.querySelector('#p-tecido').value.trim(),
+      tipo: form.querySelector('#p-tipo').value.trim(),
+      medidas: form.querySelector('#p-medidas').value.trim(),
+      lavagem: form.querySelector('#p-lavagem').value.trim(),
+      preco_custo: Number(form.querySelector('#p-custo').value || 0),
+      preco_venda: Number(form.querySelector('#p-venda').value || 0),
+      variacoes,
+    };
     try {
-      await api.criarProduto({
-        nome: form.querySelector('#p-nome').value.trim(),
-        colecao: form.querySelector('#p-colecao').value.trim(),
-        tecido: form.querySelector('#p-tecido').value.trim(),
-        tipo: form.querySelector('#p-tipo').value.trim(),
-        medidas: form.querySelector('#p-medidas').value.trim(),
-        lavagem: form.querySelector('#p-lavagem').value.trim(),
-        preco_custo: Number(form.querySelector('#p-custo').value || 0),
-        preco_venda: Number(form.querySelector('#p-venda').value || 0),
-        variacoes,
-      });
+      if (p.id) {
+        await api.atualizarProduto(p.id, dados);
+      } else {
+        await api.criarProduto(dados);
+      }
       irPara('produtos');
     } catch (err) { msg.innerHTML = `<div class="msg erro">${esc(err.message)}</div>`; }
   });
